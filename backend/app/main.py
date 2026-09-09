@@ -32,7 +32,7 @@ async def lifespan(app: FastAPI):
     try:
         if db.query(Hospital).count() == 0:
             logger.info("No hospitals detected in DB. Auto-seeding from synthetic dataset CSVs...")
-            #seed_database(reset=False)
+            seed_database(reset=False)
     finally:
         db.close()
     yield
