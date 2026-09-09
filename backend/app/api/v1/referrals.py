@@ -9,6 +9,7 @@ from app.schemas.schemas import (
     HospitalStatusUpdate,
     HospitalPreferenceCreate,
     EmergencyTransferRequest,
+    AcceptReferralRequest,
 )
 from app.services.referral_service import ReferralService
 from app.models.models import User
