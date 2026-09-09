@@ -1,6 +1,9 @@
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
+
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
+
 from app.database.session import get_db
 from app.schemas.schemas import (
     ReferralCreate,
@@ -16,43 +19,106 @@ from app.services.referral_service import ReferralService
 from app.models.models import User
 from app.core.security import get_current_user
 
+
+# ---------------------------------------------------------
+# Request models that were missing from the imports
+# ---------------------------------------------------------
+
+class MarkNotAttendedRequest(BaseModel):
+    reason: Optional[str] = None
+
+
+class ClinicalCareCreate(BaseModel):
+    """
+    Flexible clinical-care payload.
+    Allows the frontend to send diagnosis, tests,
+    medicines, follow-up details, etc.
+    """
+    data: Dict[str, Any] = {}
+
+
 router = APIRouter(prefix="/referrals", tags=["Referrals"])
 
 
-@router.post("", response_model=ReferralResponse, status_code=status.HTTP_201_CREATED)
+# ---------------------------------------------------------
+# CREATE REFERRAL
+# ---------------------------------------------------------
+
+@router.post(
+    "",
+    response_model=ReferralResponse,
+    status_code=status.HTTP_201_CREATED
+)
 def create_referral(
     payload: ReferralCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """
-    Integration point for Member 1 (PHC Portal) to submit new patient referrals.
+    Integration point for Member 1 (PHC Portal)
+    to submit new patient referrals.
     Supports MEDIUM and EMERGENCY severity.
     """
     try:
         referral = ReferralService.create_referral(db, payload)
-        return ReferralService.get_referral_detail(db, referral.referral_id)
+
+        return ReferralService.get_referral_detail(
+            db,
+            referral.referral_id
+        )
+
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
 
 
-@router.get("", response_model=List[ReferralResponse])
+# ---------------------------------------------------------
+# LIST REFERRALS
+# ---------------------------------------------------------
+
+@router.get(
+    "",
+    response_model=List[ReferralResponse]
+)
 def list_referrals(
-    severity: Optional[str] = Query(None, description="Filter by severity: MEDIUM, EMERGENCY"),
-    status: Optional[str] = Query(None, description="Filter by referral status"),
-    phc_id: Optional[str] = Query(None, description="Filter by originating PHC"),
-    hospital_id: Optional[str] = Query(None, description="Filter by assigned hospital"),
-    search: Optional[str] = Query(None, description="Search by Referral ID, Patient ID, or Department"),
+    severity: Optional[str] = Query(
+        None,
+        description="Filter by severity: MEDIUM, EMERGENCY"
+    ),
+    status: Optional[str] = Query(
+        None,
+        description="Filter by referral status"
+    ),
+    phc_id: Optional[str] = Query(
+        None,
+        description="Filter by originating PHC"
+    ),
+    hospital_id: Optional[str] = Query(
+        None,
+        description="Filter by assigned hospital"
+    ),
+    search: Optional[str] = Query(
+        None,
+        description="Search by Referral ID, Patient ID, or Department"
+    ),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=200),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """
-    Retrieve and filter patient referrals in the Central Platform.
+    Retrieve and filter patient referrals
+    in the Central Platform.
     """
+
     return ReferralService.list_referrals(
         db,
         severity=severity,
@@ -65,22 +131,43 @@ def list_referrals(
     )
 
 
-@router.get("/{referral_id}", response_model=ReferralResponse)
+# ---------------------------------------------------------
+# GET SINGLE REFERRAL
+# ---------------------------------------------------------
+
+@router.get(
+    "/{referral_id}",
+    response_model=ReferralResponse
+)
 def get_referral(
     referral_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """
-    Get comprehensive referral dossier including lifecycle timeline events and linked appointment.
+    Get comprehensive referral dossier.
     """
     try:
-        return ReferralService.get_referral_detail(db, referral_id)
+        return ReferralService.get_referral_detail(
+            db,
+            referral_id
+        )
+
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
 
 
-@router.post("/{referral_id}/hospital-selection", response_model=ReferralResponse)
+# ---------------------------------------------------------
+# HOSPITAL SELECTION
+# ---------------------------------------------------------
+
+@router.post(
+    "/{referral_id}/hospital-selection",
+    response_model=ReferralResponse
+)
 def record_hospital_selection(
     referral_id: str,
     payload: HospitalPreferenceCreate,
@@ -88,19 +175,37 @@ def record_hospital_selection(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Record patient's chosen higher hospital for MEDIUM cases (submitted by PHC worker).
-    Updates status to HOSPITAL_SELECTED and saves preference record.
+    Record patient's chosen higher hospital
+    for MEDIUM cases.
     """
+
     try:
         referral = ReferralService.record_hospital_selection(
-            db, referral_id=referral_id, hospital_id=payload.hospital_id
+            db,
+            referral_id=referral_id,
+            hospital_id=payload.hospital_id
         )
-        return ReferralService.get_referral_detail(db, referral.referral_id)
+
+        return ReferralService.get_referral_detail(
+            db,
+            referral.referral_id
+        )
+
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
 
 
-@router.post("/{referral_id}/emergency-transfer", response_model=ReferralResponse)
+# ---------------------------------------------------------
+# EMERGENCY TRANSFER
+# ---------------------------------------------------------
+
+@router.post(
+    "/{referral_id}/emergency-transfer",
+    response_model=ReferralResponse
+)
 def initiate_emergency_transfer(
     referral_id: str,
     payload: EmergencyTransferRequest,
@@ -108,31 +213,60 @@ def initiate_emergency_transfer(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Initiate emergency transfer to a higher hospital for EMERGENCY cases.
-    Direct dispatch without patient choice or normal appointment booking.
+    Initiate emergency transfer to a higher hospital.
     """
+
     try:
-        # If hospital_id is not supplied in payload, get the referral and recommended emergency hospital
         h_id = payload.hospital_id
+
         if not h_id:
             from app.services.matching_service import HospitalMatchingService
-            ref = ReferralService.get_referral_detail(db, referral_id)
-            match_res = HospitalMatchingService.match_emergency(
-                db, phc_id=ref.phc_id, referral_id=referral_id
+
+            ref = ReferralService.get_referral_detail(
+                db,
+                referral_id
             )
+
+            match_res = HospitalMatchingService.match_emergency(
+                db,
+                phc_id=ref.phc_id,
+                referral_id=referral_id
+            )
+
             if not match_res.recommended_hospital:
-                raise ValueError("No suitable emergency hospital found in network")
+                raise ValueError(
+                    "No suitable emergency hospital found in network"
+                )
+
             h_id = match_res.recommended_hospital.hospital_id
 
         referral = ReferralService.initiate_emergency_transfer(
-            db, referral_id=referral_id, hospital_id=h_id, notes=payload.notes
+            db,
+            referral_id=referral_id,
+            hospital_id=h_id,
+            notes=payload.notes
         )
-        return ReferralService.get_referral_detail(db, referral.referral_id)
+
+        return ReferralService.get_referral_detail(
+            db,
+            referral.referral_id
+        )
+
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
 
 
-@router.patch("/{referral_id}/status", response_model=ReferralResponse)
+# ---------------------------------------------------------
+# GENERIC STATUS UPDATE
+# ---------------------------------------------------------
+
+@router.patch(
+    "/{referral_id}/status",
+    response_model=ReferralResponse
+)
 def update_status(
     referral_id: str,
     payload: ReferralStatusUpdate,
@@ -140,18 +274,37 @@ def update_status(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Generic referral status updater with event logging.
+    Generic referral status updater.
     """
+
     try:
         referral = ReferralService.update_hospital_status(
-            db, referral_id=referral_id, status=payload.status, notes=payload.description
+            db,
+            referral_id=referral_id,
+            status=payload.status,
+            notes=payload.description
         )
-        return ReferralService.get_referral_detail(db, referral.referral_id)
+
+        return ReferralService.get_referral_detail(
+            db,
+            referral.referral_id
+        )
+
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
 
 
-@router.patch("/{referral_id}/hospital-status", response_model=ReferralResponse)
+# ---------------------------------------------------------
+# HOSPITAL STATUS
+# ---------------------------------------------------------
+
+@router.patch(
+    "/{referral_id}/hospital-status",
+    response_model=ReferralResponse
+)
 def update_hospital_status(
     referral_id: str,
     payload: HospitalStatusUpdate,
@@ -159,20 +312,37 @@ def update_hospital_status(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Integration endpoint for Member 3 (Higher Hospital Portal).
-    Accepts: REFERRAL_ACCEPTED, PATIENT_ATTENDED, NOT_ATTENDED, UNDER_TREATMENT, FOLLOW_UP, COMPLETED, CASE_CLOSED.
-    When NOT_ATTENDED is reported, triggers notification for Member 1 PHC portal!
+    Higher Hospital Portal status updates.
     """
+
     try:
         referral = ReferralService.update_hospital_status(
-            db, referral_id=referral_id, status=payload.status, notes=payload.notes
+            db,
+            referral_id=referral_id,
+            status=payload.status,
+            notes=payload.notes
         )
-        return ReferralService.get_referral_detail(db, referral.referral_id)
+
+        return ReferralService.get_referral_detail(
+            db,
+            referral.referral_id
+        )
+
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
 
 
-@router.post("/{referral_id}/accept", response_model=ReferralResponse)
+# ---------------------------------------------------------
+# ACCEPT REFERRAL
+# ---------------------------------------------------------
+
+@router.post(
+    "/{referral_id}/accept",
+    response_model=ReferralResponse
+)
 def accept_referral(
     referral_id: str,
     payload: Optional[AcceptReferralRequest] = None,
@@ -180,18 +350,38 @@ def accept_referral(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Higher Hospital accepts the incoming referral.
-    Transitions status to REFERRAL_ACCEPTED and dispatches notification to PHC.
+    Higher Hospital accepts incoming referral.
     """
+
     try:
         notes = payload.notes if payload else None
-        referral = ReferralService.accept_referral(db, referral_id=referral_id, notes=notes)
-        return ReferralService.get_referral_detail(db, referral.referral_id)
+
+        referral = ReferralService.accept_referral(
+            db,
+            referral_id=referral_id,
+            notes=notes
+        )
+
+        return ReferralService.get_referral_detail(
+            db,
+            referral.referral_id
+        )
+
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
 
 
-@router.post("/{referral_id}/attend", response_model=ReferralResponse)
+# ---------------------------------------------------------
+# MARK PATIENT ATTENDED
+# ---------------------------------------------------------
+
+@router.post(
+    "/{referral_id}/attend",
+    response_model=ReferralResponse
+)
 def mark_patient_attended(
     referral_id: str,
     payload: Optional[MarkAttendedRequest] = None,
@@ -199,18 +389,38 @@ def mark_patient_attended(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Higher Hospital marks patient as attended (PATIENT_ATTENDED).
-    Dispatches notification to PHC: "PATIENT VISITED HIGHER HOSPITAL".
+    Higher Hospital marks patient as attended.
     """
+
     try:
         notes = payload.notes if payload else None
-        referral = ReferralService.mark_patient_attended(db, referral_id=referral_id, notes=notes)
-        return ReferralService.get_referral_detail(db, referral.referral_id)
+
+        referral = ReferralService.mark_patient_attended(
+            db,
+            referral_id=referral_id,
+            notes=notes
+        )
+
+        return ReferralService.get_referral_detail(
+            db,
+            referral.referral_id
+        )
+
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
 
 
-@router.post("/{referral_id}/not-attended", response_model=ReferralResponse)
+# ---------------------------------------------------------
+# MARK PATIENT NOT ATTENDED
+# ---------------------------------------------------------
+
+@router.post(
+    "/{referral_id}/not-attended",
+    response_model=ReferralResponse
+)
 def mark_patient_not_attended(
     referral_id: str,
     payload: Optional[MarkNotAttendedRequest] = None,
@@ -219,17 +429,37 @@ def mark_patient_not_attended(
 ):
     """
     Higher Hospital marks patient as NOT_ATTENDED.
-    Automatically creates high-priority alert for originating PHC to initiate patient outreach.
     """
+
     try:
         reason = payload.reason if payload else None
-        referral = ReferralService.mark_not_attended(db, referral_id=referral_id, reason=reason)
-        return ReferralService.get_referral_detail(db, referral.referral_id)
+
+        referral = ReferralService.mark_not_attended(
+            db,
+            referral_id=referral_id,
+            reason=reason
+        )
+
+        return ReferralService.get_referral_detail(
+            db,
+            referral.referral_id
+        )
+
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
 
 
-@router.post("/{referral_id}/clinical-care", response_model=ReferralResponse)
+# ---------------------------------------------------------
+# CLINICAL CARE
+# ---------------------------------------------------------
+
+@router.post(
+    "/{referral_id}/clinical-care",
+    response_model=ReferralResponse
+)
 def record_clinical_care(
     referral_id: str,
     payload: ClinicalCareCreate,
@@ -237,11 +467,23 @@ def record_clinical_care(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Higher Hospital records clinical care progress (diagnosis, tests, medicines, follow-up).
-    Updates referral status to UNDER_TREATMENT, FOLLOW_UP, COMPLETED, or CASE_CLOSED.
+    Higher Hospital records clinical care progress.
     """
+
     try:
-        ReferralService.record_clinical_care(db, referral_id=referral_id, care_data=payload)
-        return ReferralService.get_referral_detail(db, referral_id)
+        ReferralService.record_clinical_care(
+            db,
+            referral_id=referral_id,
+            care_data=payload
+        )
+
+        return ReferralService.get_referral_detail(
+            db,
+            referral_id
+        )
+
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
