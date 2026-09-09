@@ -11,6 +11,8 @@ from app.schemas.schemas import (
     EmergencyTransferRequest,
 )
 from app.services.referral_service import ReferralService
+from app.models.models import User
+from app.core.security import get_current_user
 
 router = APIRouter(prefix="/referrals", tags=["Referrals"])
 
@@ -19,6 +21,7 @@ router = APIRouter(prefix="/referrals", tags=["Referrals"])
 def create_referral(
     payload: ReferralCreate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Integration point for Member 1 (PHC Portal) to submit new patient referrals.
@@ -43,6 +46,7 @@ def list_referrals(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=200),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Retrieve and filter patient referrals in the Central Platform.
@@ -63,6 +67,7 @@ def list_referrals(
 def get_referral(
     referral_id: str,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Get comprehensive referral dossier including lifecycle timeline events and linked appointment.
@@ -78,6 +83,7 @@ def record_hospital_selection(
     referral_id: str,
     payload: HospitalPreferenceCreate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Record patient's chosen higher hospital for MEDIUM cases (submitted by PHC worker).
@@ -97,6 +103,7 @@ def initiate_emergency_transfer(
     referral_id: str,
     payload: EmergencyTransferRequest,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Initiate emergency transfer to a higher hospital for EMERGENCY cases.
@@ -128,6 +135,7 @@ def update_status(
     referral_id: str,
     payload: ReferralStatusUpdate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Generic referral status updater with event logging.
@@ -146,6 +154,7 @@ def update_hospital_status(
     referral_id: str,
     payload: HospitalStatusUpdate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Integration endpoint for Member 3 (Higher Hospital Portal).
@@ -166,6 +175,7 @@ def accept_referral(
     referral_id: str,
     payload: Optional[AcceptReferralRequest] = None,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Higher Hospital accepts the incoming referral.
@@ -184,6 +194,7 @@ def mark_patient_attended(
     referral_id: str,
     payload: Optional[MarkAttendedRequest] = None,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Higher Hospital marks patient as attended (PATIENT_ATTENDED).
@@ -202,6 +213,7 @@ def mark_patient_not_attended(
     referral_id: str,
     payload: Optional[MarkNotAttendedRequest] = None,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Higher Hospital marks patient as NOT_ATTENDED.
@@ -220,6 +232,7 @@ def record_clinical_care(
     referral_id: str,
     payload: ClinicalCareCreate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Higher Hospital records clinical care progress (diagnosis, tests, medicines, follow-up).

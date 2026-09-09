@@ -1,8 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { api } from "../services/api";
 
 export type UserRole = "PHC" | "ADMIN" | "HOSPITAL" | null;
 
 export interface AuthUser {
+  id: number;
+  username: string;
   role: UserRole;
   phcId?: string;
   hospitalId?: string;
@@ -16,79 +19,73 @@ interface AuthContextType {
   role: UserRole;
   phcId: string;
   hospitalId: string;
-  loginAsPHC: (phcId: string, phcName?: string) => void;
-  loginAsAdmin: (adminName?: string) => void;
-  loginAsHospital: (hospitalId: string, hospitalName?: string) => void;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  login: (username: string, password: string) => Promise<void>;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<AuthUser | null>(() => {
-    try {
-      const saved = localStorage.getItem("ruralcare_auth_user");
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
-  });
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const [phcId, setPhcId] = useState<string>(() => {
-    return user?.phcId || localStorage.getItem("ruralcare_phc_id") || "PHC001";
-  });
-
-  const [hospitalId, setHospitalId] = useState<string>(() => {
-    return user?.hospitalId || localStorage.getItem("ruralcare_hospital_id") || "H001";
-  });
+  const phcId = user?.phcId || "";
+  const hospitalId = user?.hospitalId || "";
+  const isAuthenticated = !!user;
 
   useEffect(() => {
-    if (user) {
-      localStorage.setItem("ruralcare_auth_user", JSON.stringify(user));
-      if (user.phcId) localStorage.setItem("ruralcare_phc_id", user.phcId);
-      if (user.hospitalId) localStorage.setItem("ruralcare_hospital_id", user.hospitalId);
-    } else {
-      localStorage.removeItem("ruralcare_auth_user");
-    }
-  }, [user]);
+    const validateToken = async () => {
+      const token = localStorage.getItem("ruralcare_access_token");
+      if (!token) {
+        setIsLoading(false);
+        return;
+      }
 
-  const loginAsPHC = (targetPhcId: string, phcName?: string) => {
-    const newUser: AuthUser = {
-      role: "PHC",
-      phcId: targetPhcId,
-      userName: "Dr. PHC Medical Officer",
-      roleTitle: "Primary Health Center Staff",
-      facilityName: phcName || `Primary Health Center (${targetPhcId})`,
+      try {
+        const userData = await api.getMe();
+        setUser({
+          id: userData.id,
+          username: userData.username,
+          role: userData.role as UserRole,
+          phcId: userData.role === "PHC" ? userData.facility_id : undefined,
+          hospitalId: userData.role === "HOSPITAL" ? userData.facility_id : undefined,
+          userName: userData.full_name,
+          roleTitle: userData.role === "PHC" ? "Primary Health Center Staff" : userData.role === "HOSPITAL" ? "District Hospital Specialist" : "Central Command Admin",
+          facilityName: userData.facility_id || "State Health Mission Hub",
+        });
+      } catch (error) {
+        console.error("Token validation failed:", error);
+        localStorage.removeItem("ruralcare_access_token");
+      } finally {
+        setIsLoading(false);
+      }
     };
-    setUser(newUser);
-    setPhcId(targetPhcId);
-  };
 
-  const loginAsAdmin = (adminName?: string) => {
-    const newUser: AuthUser = {
-      role: "ADMIN",
-      userName: adminName || "State Health Administrator",
-      roleTitle: "Central Command Admin",
-      facilityName: "State Health Mission Hub",
-    };
-    setUser(newUser);
-  };
+    validateToken();
+  }, []);
 
-  const loginAsHospital = (targetHospitalId: string, hospitalName?: string) => {
-    const newUser: AuthUser = {
-      role: "HOSPITAL",
-      hospitalId: targetHospitalId,
-      userName: "Dr. Hospital Specialist",
-      roleTitle: "District Hospital Specialist",
-      facilityName: hospitalName || `District Hospital (${targetHospitalId})`,
-    };
-    setUser(newUser);
-    setHospitalId(targetHospitalId);
+  const login = async (username: string, password: string) => {
+    const res = await api.login({ username, password });
+    const { access_token, user: userData } = res;
+
+    localStorage.setItem("ruralcare_access_token", access_token);
+    setUser({
+      id: userData.id,
+      username: userData.username,
+      role: userData.role as UserRole,
+      phcId: userData.role === "PHC" ? userData.facility_id : undefined,
+      hospitalId: userData.role === "HOSPITAL" ? userData.facility_id : undefined,
+      userName: userData.full_name,
+      roleTitle: userData.role === "PHC" ? "Primary Health Center Staff" : userData.role === "HOSPITAL" ? "District Hospital Specialist" : "Central Command Admin",
+      facilityName: userData.facility_id || "State Health Mission Hub",
+    });
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem("ruralcare_auth_user");
+    localStorage.removeItem("ruralcare_access_token");
   };
 
   return (
@@ -98,9 +95,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         role: user?.role || null,
         phcId,
         hospitalId,
-        loginAsPHC,
-        loginAsAdmin,
-        loginAsHospital,
+        isAuthenticated,
+        isLoading,
+        login,
         logout,
       }}
     >

@@ -14,26 +14,11 @@ import {
   Clock3,
   Sparkles,
 } from "lucide-react";
-import { useAuth } from "../context/AuthContext";
-
 export const LandingPage: React.FC = () => {
   const navigate = useNavigate();
-  const { loginAsPHC, loginAsAdmin, loginAsHospital } = useAuth();
-
-  // Backend/auth actions intentionally remain unchanged.
-  const handleQuickPHC = (phcId = "PHC001") => {
-    loginAsPHC(phcId);
-    navigate("/phc/dashboard");
-  };
-
-  const handleQuickAdmin = () => {
-    loginAsAdmin();
-    navigate("/admin/dashboard");
-  };
-
-  const handleQuickHospital = (hospId = "H001") => {
-    loginAsHospital(hospId);
-    navigate(`/hospital/${hospId}/dashboard`);
+  
+  const navigateLogin = () => {
+    navigate("/login");
   };
 
   return (
@@ -166,7 +151,7 @@ export const LandingPage: React.FC = () => {
                 <li><CheckCircle2 size={14} /> Hospital matching & slots</li>
                 <li><CheckCircle2 size={14} /> ASHA follow-up alerts</li>
               </ul>
-              <button onClick={() => handleQuickPHC("PHC001")} className="portal-button">Enter PHC Portal <ArrowRight size={15} /></button>
+              <button onClick={navigateLogin} className="portal-button">Enter PHC Portal <ArrowRight size={15} /></button>
             </article>
 
             <article className="portal-card portal-blue">
@@ -181,7 +166,7 @@ export const LandingPage: React.FC = () => {
                 <li><CheckCircle2 size={14} /> One-click case acceptance</li>
                 <li><CheckCircle2 size={14} /> Specialist care records</li>
               </ul>
-              <button onClick={() => handleQuickHospital("H001")} className="portal-button">Enter Hospital Portal <ArrowRight size={15} /></button>
+              <button onClick={navigateLogin} className="portal-button">Enter Hospital Portal <ArrowRight size={15} /></button>
             </article>
 
             <article className="portal-card portal-violet">
@@ -196,7 +181,7 @@ export const LandingPage: React.FC = () => {
                 <li><CheckCircle2 size={14} /> Emergency & ICU capacity</li>
                 <li><CheckCircle2 size={14} /> Multi-channel audit logs</li>
               </ul>
-              <button onClick={handleQuickAdmin} className="portal-button">Enter Admin Portal <ArrowRight size={15} /></button>
+              <button onClick={navigateLogin} className="portal-button">Enter Admin Portal <ArrowRight size={15} /></button>
             </article>
           </div>
         </section>

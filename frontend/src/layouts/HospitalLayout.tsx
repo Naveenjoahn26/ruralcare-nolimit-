@@ -24,7 +24,7 @@ export const HospitalLayout: React.FC = () => {
   const { hospitalId: routeHospitalId } = useParams<{ hospitalId: string }>();
   const location = useLocation();
   const navigate = useNavigate();
-  const { hospitalId, loginAsHospital, logout, user } = useAuth();
+  const { hospitalId, logout, user } = useAuth();
 
   const activeHospId = routeHospitalId || hospitalId || "H001";
 
@@ -46,13 +46,7 @@ export const HospitalLayout: React.FC = () => {
     loadHospitals();
   }, [activeHospId]);
 
-  const handleHospitalSwitch = (newId: string) => {
-    const hosp = hospitals.find((h) => h.hospital_id === newId);
-    loginAsHospital(newId, hosp?.hospital_name);
-    // Replace current path segment with new hospital ID
-    const newPath = location.pathname.replace(/\/hospital\/[^\/]+/, `/hospital/${newId}`);
-    navigate(newPath);
-  };
+
 
   const handleLogout = () => {
     logout();
@@ -92,17 +86,9 @@ export const HospitalLayout: React.FC = () => {
               <span>Selected Hospital</span>
               <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
             </div>
-            <select
-              value={activeHospId}
-              onChange={(e) => handleHospitalSwitch(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs font-bold text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            >
-              {hospitals.map((h) => (
-                <option key={h.hospital_id} value={h.hospital_id}>
-                  {h.hospital_name} ({h.hospital_id})
-                </option>
-              ))}
-            </select>
+            <div className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs font-bold text-white mb-1">
+              {currentHospital ? `${currentHospital.hospital_name} (${currentHospital.hospital_id})` : activeHospId}
+            </div>
             <div className="text-[10px] text-slate-400 mt-1 font-mono">
               {currentHospital ? `${currentHospital.district} • ${currentHospital.hospital_type}` : ""}
             </div>

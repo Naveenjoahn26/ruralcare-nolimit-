@@ -245,6 +245,19 @@ class ClinicalCare(Base):
     hospital = relationship("Hospital")
 
 
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    username = Column(String(100), unique=True, nullable=False, index=True)
+    hashed_password = Column(String(255), nullable=False)
+    full_name = Column(String(200), nullable=False)
+    role = Column(String(20), nullable=False)  # PHC, HOSPITAL, ADMIN
+    facility_id = Column(String(50), nullable=True)  # phc_id or hospital_id
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 class LocalConsultation(Base):
     __tablename__ = "local_consultations"
 

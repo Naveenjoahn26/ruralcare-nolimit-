@@ -2,7 +2,8 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from app.database.session import get_db
-from app.models.models import Hospital, Department, Doctor, TestItem, MedicineItem, EmergencyResource
+from app.models.models import Hospital, Department, Doctor, TestItem, MedicineItem, EmergencyResource, User
+from app.core.security import get_current_user
 from app.schemas.schemas import HospitalBase, HospitalDetailResponse, AppointmentSlotBase
 from app.services.appointment_service import AppointmentService
 
@@ -17,6 +18,7 @@ def list_hospitals(
     test: Optional[str] = Query(None, description="Filter by available test name"),
     search: Optional[str] = Query(None, description="Search by hospital name or district"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Search and filter higher hospitals in the network.
@@ -64,6 +66,7 @@ def list_hospitals(
 def get_hospital(
     hospital_id: str,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Retrieve full details of a specific hospital including departments, doctors, tests, medicines, and emergency resources.
@@ -102,6 +105,7 @@ def get_hospital_slots(
     date: Optional[str] = Query(None, description="Filter by date (YYYY-MM-DD)"),
     status_filter: Optional[str] = Query("AVAILABLE", alias="status", description="Filter by slot status"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Get appointment slots for a specific hospital with optional department/doctor/date filters.

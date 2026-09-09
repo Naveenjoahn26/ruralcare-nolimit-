@@ -2,6 +2,8 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from app.database.session import get_db
+from app.models.models import User
+from app.core.security import get_current_user
 from app.schemas.schemas import (
     NotificationResponse,
     NotificationCreateRequest,
@@ -15,7 +17,7 @@ router = APIRouter(prefix="/notifications", tags=["Notifications & Alerts"])
 
 
 @router.get("/health", response_model=NotificationHealthResponse)
-def get_notification_health():
+def get_notification_health(current_user: User = Depends(get_current_user)):
     """
     Check notification provider status (SMTP configuration, TLS mode, port, sender).
     Safe to query without exposing credentials.
@@ -24,7 +26,7 @@ def get_notification_health():
 
 
 @router.post("/test-email", response_model=TestEmailResponse)
-def send_test_email(payload: TestEmailRequest):
+def send_test_email(payload: TestEmailRequest, current_user: User = Depends(get_current_user)):
     """
     Send a test email using configured SMTP provider, or validate format in development mode.
     """
@@ -52,6 +54,7 @@ def get_notifications(
     unread_only: bool = Query(False, description="Filter only unread notifications"),
     limit: int = Query(50, ge=1, le=100),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Retrieve integration notifications and alerts (e.g. APPOINTMENT_CONFIRMED, PATIENT_NOT_ATTENDED, EMERGENCY_TRANSFER).
@@ -75,6 +78,7 @@ def get_notifications(
 def send_notification(
     payload: NotificationCreateRequest,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Manually dispatch a notification across Email or SMS channel.
@@ -97,6 +101,7 @@ def send_notification(
 def mark_notification_read(
     notification_id: str,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Mark a notification as read.

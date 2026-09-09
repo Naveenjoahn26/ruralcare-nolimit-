@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.database.session import get_db
-from app.models.models import Referral, Hospital, PHC, Notification
+from app.models.models import Referral, Hospital, PHC, Notification, User
+from app.core.security import get_current_user
 from app.schemas.schemas import DashboardStats
 from app.services.referral_service import ReferralService
 from app.services.notification_service import NotificationService
@@ -10,7 +11,7 @@ router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
 
 
 @router.get("/stats", response_model=DashboardStats)
-def get_dashboard_stats(db: Session = Depends(get_db)):
+def get_dashboard_stats(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """
     Get aggregated real-time statistics and metrics for the Central Platform Dashboard.
     """

@@ -18,6 +18,8 @@ class Settings(BaseSettings):
         "http://localhost:8000",
     ]
     SECRET_KEY: str = os.getenv("SECRET_KEY", "ruralcare-central-platform-sih26133-secret-key")
+    JWT_ALGORITHM: str = "HS256"
+    JWT_EXPIRATION_MINUTES: int = int(os.getenv("JWT_EXPIRATION_MINUTES", "480"))  # 8 hours
     DATA_DIR: str = os.getenv(
         "DATA_DIR",
         os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../data")),

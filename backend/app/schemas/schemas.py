@@ -444,3 +444,37 @@ class DashboardStats(BaseModel):
     active_phcs_count: int
     recent_referrals: List[ReferralResponse] = []
     unread_notifications: List[NotificationResponse] = []
+
+
+# ----------------------------------------------------
+# Authentication Schemas
+# ----------------------------------------------------
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+class RegisterRequest(BaseModel):
+    username: str
+    password: str
+    full_name: str
+    role: str  # PHC, HOSPITAL, ADMIN
+    facility_id: Optional[str] = None
+
+
+class UserResponse(BaseModel):
+    id: int
+    username: str
+    full_name: str
+    role: str
+    facility_id: Optional[str] = None
+    is_active: bool
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: UserResponse
+

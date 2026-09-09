@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 from app.database.session import get_db
 from app.schemas.schemas import MediumMatchingRequest, EmergencyMatchingRequest, MatchingResponse
 from app.services.matching_service import HospitalMatchingService
+from app.models.models import User
+from app.core.security import get_current_user
 
 router = APIRouter(prefix="/matching", tags=["Hospital Matching"])
 
@@ -11,6 +13,7 @@ router = APIRouter(prefix="/matching", tags=["Hospital Matching"])
 def match_medium(
     payload: MediumMatchingRequest,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Hospital Matching Engine for MEDIUM severity cases.
@@ -35,6 +38,7 @@ def match_medium(
 def match_emergency(
     payload: EmergencyMatchingRequest,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Hospital Matching Engine for EMERGENCY severity cases.

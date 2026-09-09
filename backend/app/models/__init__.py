@@ -12,6 +12,7 @@ from app.models.models import (
     ReferralEvent,
     Notification,
     PatientRecordReference,
+    User,
 )
 
 __all__ = [
@@ -28,4 +29,5 @@ __all__ = [
     "ReferralEvent",
     "Notification",
     "PatientRecordReference",
+    "User",
 ]

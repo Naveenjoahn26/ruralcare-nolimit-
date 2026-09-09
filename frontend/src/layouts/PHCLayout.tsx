@@ -24,7 +24,7 @@ import { PHC, NotificationItem } from "../types";
 export const PHCLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { phcId, loginAsPHC, logout, user } = useAuth();
+  const { phcId, logout, user } = useAuth();
 
   const [phcs, setPhcs] = useState<PHC[]>([]);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
@@ -58,10 +58,7 @@ export const PHCLayout: React.FC = () => {
     return () => clearInterval(interval);
   }, [phcId]);
 
-  const handlePHCSwitch = (newPhcId: string) => {
-    const phc = phcs.find((p) => p.phc_id === newPhcId);
-    loginAsPHC(newPhcId, phc?.phc_name);
-  };
+
 
   const handleLogout = () => {
     logout();
@@ -105,17 +102,9 @@ export const PHCLayout: React.FC = () => {
               <span>Active PHC Facility</span>
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
             </div>
-            <select
-              value={phcId}
-              onChange={(e) => handlePHCSwitch(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs font-bold text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
-            >
-              {phcs.map((p) => (
-                <option key={p.phc_id} value={p.phc_id}>
-                  {p.phc_name} ({p.phc_id})
-                </option>
-              ))}
-            </select>
+            <div className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-xs font-bold text-white mb-1">
+              {activePHC ? `${activePHC.phc_name} (${activePHC.phc_id})` : phcId}
+            </div>
             <div className="text-[10px] text-slate-400 mt-1 font-mono">
               {activePHC ? `${activePHC.district}, ${activePHC.state}` : "National Health Grid"}
             </div>

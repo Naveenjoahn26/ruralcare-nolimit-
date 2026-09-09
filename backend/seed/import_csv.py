@@ -384,6 +384,30 @@ def seed_database(target_engine=None, target_session_local=None, data_dir: str =
             db.merge(prec)
         db.commit()
 
+        # 12. Seed Default Demo Users
+        from app.models.models import User
+        from app.core.security import hash_password
+
+        logger.info("Seeding default demo users...")
+        default_users = [
+            {"username": "NOLIMITS_PHC", "full_name": "Dr. V. Karthik", "role": "PHC", "facility_id": "PHC001", "password": "Nolimits@2026"},
+            {"username": "NOLIMITS_HOSPITAL", "full_name": "Dr. Anjali Krishnan", "role": "HOSPITAL", "facility_id": "H001", "password": "Nolimits@2026"},
+            {"username": "NOLIMITS_ADMIN", "full_name": "State Health Director", "role": "ADMIN", "facility_id": None, "password": "Nolimits@2026"},
+        ]
+
+        for u in default_users:
+            if not db.query(User).filter(User.username == u["username"]).first():
+                new_user = User(
+                    username=u["username"],
+                    hashed_password=hash_password(u["password"]),
+                    full_name=u["full_name"],
+                    role=u["role"],
+                    facility_id=u["facility_id"],
+                    is_active=True,
+                )
+                db.add(new_user)
+        db.commit()
+
         logger.info("Database seeding completed successfully!")
 
     except Exception as e:

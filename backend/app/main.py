@@ -13,6 +13,7 @@ from app.api.v1.phcs import router as phcs_router
 from app.api.v1.patients import router as patients_router
 from app.api.v1.notifications import router as notifications_router
 from app.api.v1.dashboard import router as dashboard_router
+from app.api.v1.auth import router as auth_router
 from seed.import_csv import seed_database
 
 logging.basicConfig(level=logging.INFO)
@@ -77,6 +78,7 @@ app.add_middleware(
 
 # Include API Routers
 app.include_router(dashboard_router, prefix=settings.API_V1_STR)
+app.include_router(auth_router, prefix=settings.API_V1_STR)
 app.include_router(referrals_router, prefix=settings.API_V1_STR)
 app.include_router(matching_router, prefix=settings.API_V1_STR)
 app.include_router(hospitals_router, prefix=settings.API_V1_STR)

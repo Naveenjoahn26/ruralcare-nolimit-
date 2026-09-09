@@ -5,7 +5,8 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from app.database.session import get_db
-from app.models.models import PatientRecordReference, LocalConsultation, PHC
+from app.models.models import PatientRecordReference, LocalConsultation, PHC, User
+from app.core.security import get_current_user
 from app.schemas.schemas import (
     PatientCreate,
     PatientUpdate,
@@ -50,6 +51,7 @@ def list_patients(
     phc_id: Optional[str] = Query(None, description="Filter by PHC"),
     limit: int = Query(50, ge=1, le=100),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Search and list registered patients.
@@ -72,6 +74,7 @@ def list_patients(
 def create_patient(
     payload: PatientCreate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Register a new patient at PHC.
@@ -113,6 +116,7 @@ def create_patient(
 def get_patient(
     patient_id: str,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Get detailed patient record by Patient ID.
@@ -127,6 +131,7 @@ def get_patient(
 def get_patient_records(
     patient_id: str,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Integration endpoint for PHC and Hospital Portals to get patient clinical record.
@@ -165,6 +170,7 @@ def update_patient(
     patient_id: str,
     payload: PatientUpdate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Update patient demographics, vitals, symptoms, or notes.
@@ -208,6 +214,7 @@ def record_local_consultation(
     patient_id: str,
     payload: LocalConsultationCreate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Record local PHC care for NORMAL severity cases (handled completely at PHC).
@@ -238,6 +245,7 @@ def record_local_consultation(
 def get_local_consultations(
     patient_id: str,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Get all local consultations for a patient.

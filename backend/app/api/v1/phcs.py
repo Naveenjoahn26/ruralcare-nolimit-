@@ -2,7 +2,8 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.database.session import get_db
-from app.models.models import PHC
+from app.models.models import PHC, User
+from app.core.security import get_current_user
 from app.schemas.schemas import PHCBase, ReferralResponse, NotificationResponse
 from app.services.referral_service import ReferralService
 from app.services.notification_service import NotificationService
@@ -11,7 +12,7 @@ router = APIRouter(prefix="/phcs", tags=["PHCs"])
 
 
 @router.get("", response_model=List[PHCBase])
-def list_phcs(db: Session = Depends(get_db)):
+def list_phcs(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """
     List all registered Primary Health Centres (PHCs).
     """
@@ -19,7 +20,7 @@ def list_phcs(db: Session = Depends(get_db)):
 
 
 @router.get("/{phc_id}", response_model=PHCBase)
-def get_phc(phc_id: str, db: Session = Depends(get_db)):
+def get_phc(phc_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """
     Get details of a specific Primary Health Centre.
     """
@@ -36,6 +37,7 @@ def get_phc_referrals(
     severity: Optional[str] = None,
     search: Optional[str] = None,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Get all referrals originating from this PHC ("My Referrals").
@@ -55,6 +57,7 @@ def get_phc_notifications(
     unread_only: bool = False,
     limit: int = 50,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Get all notifications and alerts for this PHC.

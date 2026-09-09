@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import {
   Activity,
   Stethoscope,
@@ -9,62 +9,57 @@ import {
   Lock,
   User,
   KeyRound,
-  CheckCircle2,
-  Sparkles,
+  Loader2,
 } from "lucide-react";
-import { useAuth, UserRole } from "../context/AuthContext";
-import api from "../services/api";
-import { PHC, Hospital } from "../types";
+import { useAuth } from "../context/AuthContext";
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const { loginAsPHC, loginAsAdmin, loginAsHospital } = useAuth();
+  const location = useLocation();
+  const { login, isAuthenticated, isLoading, role, hospitalId } = useAuth();
 
   const [selectedRole, setSelectedRole] = useState<"PHC" | "HOSPITAL" | "ADMIN">("PHC");
-  const [phcs, setPhcs] = useState<PHC[]>([]);
-  const [hospitals, setHospitals] = useState<Hospital[]>([]);
-  const [loadingData, setLoadingData] = useState(true);
+  const [username, setUsername] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
+  const [error, setError] = useState<string>("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Form states
-  const [selectedPhcId, setSelectedPhcId] = useState<string>("PHC001");
-  const [selectedHospitalId, setSelectedHospitalId] = useState<string>("H001");
-  const [staffName, setStaffName] = useState<string>("");
-  const [accessCode, setAccessCode] = useState<string>("DEMO-2026");
-
+  // Redirect already-authenticated users to their dashboard
   useEffect(() => {
-    const loadFacilities = async () => {
-      try {
-        const [phcList, hospList] = await Promise.all([
-          api.getPHCs(),
-          api.getHospitals(),
-        ]);
-        setPhcs(phcList);
-        setHospitals(hospList);
-        if (phcList.length > 0) setSelectedPhcId(phcList[0].phc_id);
-        if (hospList.length > 0) setSelectedHospitalId(hospList[0].hospital_id);
-      } catch (e) {
-        console.error("Failed to load facilities", e);
-      } finally {
-        setLoadingData(false);
-      }
-    };
-    loadFacilities();
-  }, []);
+    if (!isLoading && isAuthenticated && role) {
+      const dashboardPath =
+        role === "PHC" ? "/phc/dashboard" :
+        role === "HOSPITAL" ? `/hospital/${hospitalId || 'H001'}/dashboard` :
+        "/admin/dashboard";
+      navigate(dashboardPath, { replace: true });
+    }
+  }, [isLoading, isAuthenticated, role, hospitalId, navigate]);
 
-  const handleLogin = (e: React.FormEvent) => {
+  // Clear errors on tab switch, but don't auto-fill credentials
+  useEffect(() => {
+    setUsername("");
+    setPassword("");
+    setError("");
+  }, [selectedRole]);
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
+    setError("");
 
-    if (selectedRole === "PHC") {
-      const phc = phcs.find((p) => p.phc_id === selectedPhcId);
-      loginAsPHC(selectedPhcId, phc?.phc_name);
-      navigate("/phc/dashboard");
-    } else if (selectedRole === "HOSPITAL") {
-      const hosp = hospitals.find((h) => h.hospital_id === selectedHospitalId);
-      loginAsHospital(selectedHospitalId, hosp?.hospital_name);
-      navigate(`/hospital/${selectedHospitalId}/dashboard`);
-    } else if (selectedRole === "ADMIN") {
-      loginAsAdmin(staffName || "State Health Director");
-      navigate("/admin/dashboard");
+    try {
+      await login(username, password);
+      
+      const from = location.state?.from?.pathname || (
+        selectedRole === "PHC" ? "/phc/dashboard" :
+        selectedRole === "HOSPITAL" ? "/hospital/H001/dashboard" :
+        "/admin/dashboard"
+      );
+      navigate(from, { replace: true });
+    } catch (err: any) {
+      setError(err.response?.data?.detail || "Invalid username or password.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -151,86 +146,52 @@ export const LoginPage: React.FC = () => {
           </div>
 
           <form onSubmit={handleLogin} className="space-y-4">
-            {/* Conditional Facility Pickers */}
-            {selectedRole === "PHC" && (
-              <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1.5">
-                  Select Primary Health Center (PHC Facility):
-                </label>
-                <select
-                  value={selectedPhcId}
-                  onChange={(e) => setSelectedPhcId(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
-                >
-                  {phcs.map((p) => (
-                    <option key={p.phc_id} value={p.phc_id}>
-                      {p.phc_name} ({p.district}) • {p.phc_id}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {selectedRole === "HOSPITAL" && (
-              <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1.5">
-                  Select Secondary / Tertiary Hospital:
-                </label>
-                <select
-                  value={selectedHospitalId}
-                  onChange={(e) => setSelectedHospitalId(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
-                >
-                  {hospitals.map((h) => (
-                    <option key={h.hospital_id} value={h.hospital_id}>
-                      {h.hospital_name} ({h.district}) • {h.hospital_id}
-                    </option>
-                  ))}
-                </select>
+            
+            {error && (
+              <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-xs p-3 rounded-xl text-center">
+                {error}
               </div>
             )}
 
             <div>
               <label className="block text-xs font-bold text-slate-300 mb-1.5">
-                Staff Identity / Officer Name:
+                Username:
               </label>
               <div className="relative">
                 <User className="w-4 h-4 absolute left-3.5 top-3 text-slate-500" />
                 <input
                   type="text"
-                  value={staffName}
-                  onChange={(e) => setStaffName(e.target.value)}
-                  placeholder={
-                    selectedRole === "PHC"
-                      ? "Dr. V. Karthik (Medical Officer)"
-                      : selectedRole === "HOSPITAL"
-                      ? "Dr. Anjali Krishnan (Specialist)"
-                      : "State Mission Director"
-                  }
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Enter username"
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-10 pr-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition"
+                  required
                 />
               </div>
             </div>
 
             <div>
               <label className="block text-xs font-bold text-slate-300 mb-1.5 flex items-center justify-between">
-                <span>Access Passcode:</span>
-                <span className="text-[10px] text-cyan-400 font-mono">Demo Mode</span>
+                <span>Password:</span>
               </label>
               <div className="relative">
                 <KeyRound className="w-4 h-4 absolute left-3.5 top-3 text-slate-500" />
                 <input
                   type="password"
-                  value={accessCode}
-                  onChange={(e) => setAccessCode(e.target.value)}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-10 pr-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 transition font-mono"
+                  required
                 />
               </div>
             </div>
 
             <button
               type="submit"
-              className={`w-full py-3 rounded-xl font-bold text-xs text-white shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2 hover:scale-[1.02] ${
+              disabled={isSubmitting}
+              className={`w-full py-3 rounded-xl font-bold text-xs text-white shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                isSubmitting ? "opacity-70 scale-100 cursor-not-allowed" : "hover:scale-[1.02]"
+              } ${
                 selectedRole === "PHC"
                   ? "bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/30"
                   : selectedRole === "HOSPITAL"
@@ -238,7 +199,11 @@ export const LoginPage: React.FC = () => {
                   : "bg-blue-600 hover:bg-blue-500 shadow-blue-600/30"
               }`}
             >
-              Sign In to {selectedRole === "PHC" ? "PHC Portal" : selectedRole === "HOSPITAL" ? "Hospital Portal" : "Admin Command"}
+              {isSubmitting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                `Sign In to ${selectedRole === "PHC" ? "PHC Portal" : selectedRole === "HOSPITAL" ? "Hospital Portal" : "Admin Command"}`
+              )}
             </button>
           </form>
 
@@ -259,5 +224,3 @@ export const LoginPage: React.FC = () => {
 };
 
 export default LoginPage;
-
-

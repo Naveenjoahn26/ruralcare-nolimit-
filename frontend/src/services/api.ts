@@ -24,7 +24,49 @@ const apiClient = axios.create({
   },
 });
 
+apiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem("ruralcare_access_token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      // Don't redirect for auth endpoints — AuthContext handles those gracefully
+      const requestUrl = error.config?.url || "";
+      const isAuthEndpoint =
+        requestUrl.includes("/auth/me") || requestUrl.includes("/auth/login");
+
+      if (!isAuthEndpoint) {
+        localStorage.removeItem("ruralcare_access_token");
+        if (
+          window.location.pathname !== "/login" &&
+          window.location.pathname !== "/"
+        ) {
+          window.location.href = "/login";
+        }
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 export const api = {
+  // Auth
+  login: async (payload: any): Promise<any> => {
+    const res = await apiClient.post("/auth/login", payload);
+    return res.data;
+  },
+
+  getMe: async (): Promise<any> => {
+    const res = await apiClient.get("/auth/me");
+    return res.data;
+  },
+
   // Dashboard
   getDashboardStats: async (): Promise<DashboardStats> => {
     const res = await apiClient.get("/dashboard/stats");

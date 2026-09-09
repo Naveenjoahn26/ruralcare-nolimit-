@@ -1,9 +1,11 @@
 import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 // Public Pages
 import { LandingPage } from "../pages/LandingPage";
 import { LoginPage } from "../pages/LoginPage";
+import { ProtectedRoute } from "../components/ProtectedRoute";
 
 // Layouts
 import { PHCLayout } from "../layouts/PHCLayout";
@@ -37,6 +39,11 @@ import { AdminAppointmentsPage } from "../pages/admin/AdminAppointmentsPage";
 import { AdminEmergenciesPage } from "../pages/admin/AdminEmergenciesPage";
 import { AdminNotificationPage } from "../pages/admin/AdminNotificationPage";
 
+const HospitalRootRedirect = () => {
+  const { hospitalId } = useAuth();
+  return <Navigate to={`/hospital/${hospitalId || 'H001'}/dashboard`} replace />;
+};
+
 export const AppRoutes: React.FC = () => {
   return (
     <Routes>
@@ -47,7 +54,7 @@ export const AppRoutes: React.FC = () => {
       <Route path="/login" element={<LoginPage />} />
 
       {/* 3. PHC Worker Dedicated Portal */}
-      <Route path="/phc" element={<PHCLayout />}>
+      <Route path="/phc" element={<ProtectedRoute requiredRole="PHC"><PHCLayout /></ProtectedRoute>}>
         <Route index element={<Navigate to="/phc/dashboard" replace />} />
         <Route path="dashboard" element={<PHCDashboardPage />} />
         <Route path="patient/new" element={<PHCPatientRegistration />} />
@@ -63,8 +70,8 @@ export const AppRoutes: React.FC = () => {
       </Route>
 
       {/* 4. Higher Hospital Dedicated Portal */}
-      <Route path="/hospital" element={<Navigate to="/hospital/H001/dashboard" replace />} />
-      <Route path="/hospital/:hospitalId" element={<HospitalLayout />}>
+      <Route path="/hospital" element={<HospitalRootRedirect />} />
+      <Route path="/hospital/:hospitalId" element={<ProtectedRoute requiredRole="HOSPITAL"><HospitalLayout /></ProtectedRoute>}>
         <Route index element={<Navigate to="dashboard" replace />} />
         <Route path="dashboard" element={<HospitalDashboardPage />} />
         <Route path="referrals" element={<HospitalReferralsPage />} />
@@ -74,7 +81,7 @@ export const AppRoutes: React.FC = () => {
       </Route>
 
       {/* 5. Central Admin Dedicated Portal */}
-      <Route path="/admin" element={<AdminLayout />}>
+      <Route path="/admin" element={<ProtectedRoute requiredRole="ADMIN"><AdminLayout /></ProtectedRoute>}>
         <Route index element={<Navigate to="/admin/dashboard" replace />} />
         <Route path="dashboard" element={<AdminDashboardPage />} />
         <Route path="referrals" element={<AdminReferralMonitor />} />
