@@ -10,6 +10,7 @@ from app.schemas.schemas import (
     HospitalPreferenceCreate,
     EmergencyTransferRequest,
     AcceptReferralRequest,
+    MarkAttendedRequest,
 )
 from app.services.referral_service import ReferralService
 from app.models.models import User
